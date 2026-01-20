@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { User as SupabaseUser, AuthError, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { User, UserRole } from '../types';
 
@@ -7,8 +7,9 @@ interface AuthContextType {
   user: SupabaseUser | null;
   userProfile: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<any>;
-  signUp: (email: string, password: string, userData: any) => Promise<any>;
+  error: Error | null;
+  signIn: (email: string, password: string) => Promise<{ data: { user: SupabaseUser | null; session: Session | null }; error: AuthError | { message: string } | null }>;
+  signUp: (email: string, password: string, userData: any) => Promise<{ data: { user: SupabaseUser | null; session: Session | null }; error: AuthError | { message: string } | null }>;
   signOut: () => Promise<void>;
   hasRole: (role: UserRole) => boolean;
   isAdmin: boolean;
@@ -30,6 +31,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -48,6 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Error fetching user profile:', error);
+        if (isMounted) {
+          setError(error instanceof Error ? error : new Error('Error fetching user profile'));
+        }
       }
     };
 
@@ -86,20 +91,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    // Check if Supabase is properly configured
+  const checkSupabaseConfig = () => {
     if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
-      return { 
-        data: null, 
-        error: { message: 'Supabase ist nicht konfiguriert. Bitte richten Sie Ihre Supabase-Verbindung ein.' } 
+      return {
+        data: { user: null, session: null },
+        error: { message: 'Supabase ist nicht konfiguriert. Bitte richten Sie Ihre Supabase-Verbindung ein.' }
       };
     }
+    return null;
+  };
 
-    console.log('Attempting sign in with:', { 
-      email, 
-      supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
-      hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY 
-    });
+  const signIn = async (email: string, password: string) => {
+    // Check if Supabase is properly configured
+    const configError = checkSupabaseConfig();
+    if (configError) return configError;
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -124,14 +129,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, userData: any) => {
     // Check if Supabase is properly configured
-    if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
-      return {
-        data: null,
-        error: { message: 'Supabase ist nicht konfiguriert. Bitte richten Sie Ihre Supabase-Verbindung ein.' }
-      };
-    }
-
-    console.log('Signing up with userData:', userData);
+    const configError = checkSupabaseConfig();
+    if (configError) return configError;
 
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -144,8 +143,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) {
       console.error('Sign up error:', error);
-    } else {
-      console.log('Sign up successful:', data);
     }
 
     // Das Benutzerprofil wird automatisch durch den Datenbank-Trigger erstellt
@@ -188,6 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     userProfile,
     loading,
+    error,
     signIn,
     signUp,
     signOut,
