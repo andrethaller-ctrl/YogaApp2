@@ -10,10 +10,12 @@ export interface User {
   postal_code: string;
   city: string;
   phone: string;
-  role: 'student' | 'teacher' | 'admin';
+  role?: 'student' | 'teacher' | 'admin';
   roles: UserRole[];
   gdpr_consent: boolean;
   gdpr_consent_date: string;
+  email_verified?: boolean;
+  email_verified_at?: string;
   created_at: string;
   updated_at: string;
 }

@@ -275,7 +275,7 @@ const Courses: React.FC = () => {
           <p className="text-gray-600">Entdecken Sie unsere Yoga-Kurse</p>
         </div>
         
-        {(userProfile?.role === 'teacher' || userProfile?.role === 'admin') && (
+        {(isAdmin || isCourseLeader) && (
           <button
             onClick={() => navigate('/create-course')}
             className="mt-4 sm:mt-0 bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors flex items-center"
