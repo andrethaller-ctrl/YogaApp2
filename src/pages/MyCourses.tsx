@@ -122,12 +122,16 @@ const MyCourses: React.FC = () => {
 
     setCancellingCourse(courseId);
     try {
-      const { error } = await supabase.rpc('unregister_from_course', {
+      const { data, error } = await supabase.rpc('unregister_from_course', {
         p_course_id: courseId,
         p_user_id: userProfile?.id
       });
 
       if (error) throw error;
+
+      if (data && !data.success) {
+        throw new Error(data.message || 'Stornierung fehlgeschlagen');
+      }
 
       setEnrolledCourses(prev => prev.filter(c => c.id !== courseId));
       setSuccessMessage('Anmeldung erfolgreich storniert!');
