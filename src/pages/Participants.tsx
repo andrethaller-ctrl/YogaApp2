@@ -54,7 +54,8 @@ const Participants: React.FC = () => {
             *,
             user:users(*),
             course:courses(*)
-          `);
+          `)
+          .neq('status', 'cancelled');
 
         if (userProfile.roles?.includes('course_leader') && !userProfile.roles?.includes('admin')) {
           const courseIds = coursesData?.map(c => c.id) || [];
