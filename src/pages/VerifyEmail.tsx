@@ -32,6 +32,8 @@ const VerifyEmail: React.FC = () => {
         );
 
         const data = await response.json();
+        console.log('Response status:', response.status);
+        console.log('Response data:', data);
 
         if (response.ok && data.success) {
           setStatus('success');
@@ -39,12 +41,16 @@ const VerifyEmail: React.FC = () => {
           setTimeout(() => navigate('/auth'), 3000);
         } else {
           setStatus('error');
-          setMessage(data.error || 'Fehler bei der Verifizierung.');
+          const errorMsg = data.error || 'Fehler bei der Verifizierung.';
+          const details = data.details ? ` Details: ${data.details}` : '';
+          const type = data.type ? ` (${data.type})` : '';
+          setMessage(errorMsg + details + type);
+          console.error('Verification failed:', data);
         }
       } catch (error) {
         console.error('Verification error:', error);
         setStatus('error');
-        setMessage('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+        setMessage(`Ein Fehler ist aufgetreten: ${error.message || String(error)}`);
       }
     };
 
