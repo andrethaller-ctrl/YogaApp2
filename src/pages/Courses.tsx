@@ -196,16 +196,16 @@ const Courses: React.FC = () => {
   };
 
   const isUserRegistered = (courseId: string) => {
-    return registrations.some(reg => reg.course_id === courseId);
+    return registrations.some(reg => reg.course_id === courseId && reg.status !== 'cancelled');
   };
 
   const getUserRegistrationStatus = (courseId: string) => {
-    const reg = registrations.find(reg => reg.course_id === courseId);
+    const reg = registrations.find(reg => reg.course_id === courseId && reg.status !== 'cancelled');
     return reg?.status || null;
   };
 
   const getUserWaitlistPosition = (courseId: string) => {
-    const reg = registrations.find(reg => reg.course_id === courseId);
+    const reg = registrations.find(reg => reg.course_id === courseId && reg.status !== 'cancelled');
     return reg?.waitlist_position || null;
   };
 
