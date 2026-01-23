@@ -399,7 +399,7 @@ const MyCourses: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {teachingCourses.map((course) => {
                 const registeredCount = course.registrations?.filter((r: any) => r.status === 'registered' && !r.is_waitlist).length || 0;
-                const waitlistCount = course.registrations?.filter((r: any) => r.is_waitlist).length || 0;
+                const waitlistCount = course.registrations?.filter((r: any) => r.status === 'waitlist' && r.is_waitlist).length || 0;
                 const isFull = registeredCount >= (course.max_participants || 0);
                 const isPast = isPastCourse(course.date, course.time);
 
