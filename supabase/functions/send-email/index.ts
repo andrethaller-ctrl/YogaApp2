@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
     });
 
     const info = await transporter.sendMail({
-      from: `"Die Thallers" <${smtpUser}>`,
+      from: `"Die Thallers Yoga" <${smtpUser}>`,
       to: to,
       subject: subject,
       text: text || html.replace(/<[^>]*>/g, ''),
