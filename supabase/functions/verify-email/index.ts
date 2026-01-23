@@ -30,32 +30,57 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    console.log("Verifying token:", token.substring(0, 10) + "...");
+
     const { data: verifyResult, error: verifyError } = await supabase.rpc(
       "verify_token",
       { p_token: token, p_type: "email_verification" }
     );
 
+    console.log("Verify result:", JSON.stringify(verifyResult));
+    console.log("Verify error:", JSON.stringify(verifyError));
+
     if (verifyError) {
       console.error("Token verification error:", verifyError);
       return new Response(
-        JSON.stringify({ error: "Fehler bei der Token-Überprüfung" }),
+        JSON.stringify({ type: "verify_error", error: "Fehler bei der Token-Überprüfung", details: verifyError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!verifyResult || verifyResult.length === 0) {
+      console.error("No result from verify_token");
+      return new Response(
+        JSON.stringify({ type: "no_result", error: "Keine Antwort von der Verifizierungsfunktion" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const result = verifyResult[0];
-    if (!result || !result.valid) {
+    console.log("Result object:", JSON.stringify(result));
+
+    if (!result.valid) {
       return new Response(
-        JSON.stringify({ error: result?.message || "Token ungültig oder abgelaufen" }),
+        JSON.stringify({ type: "invalid_token", error: result.message || "Token ungültig oder abgelaufen" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const userId = result.user_id;
 
+    if (!userId) {
+      console.error("No user_id in result");
+      return new Response(
+        JSON.stringify({ type: "no_user_id", error: "Keine Benutzer-ID gefunden" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Updating user:", userId);
+
     const { error: updateError } = await supabase
       .from("users")
-      .update({ 
+      .update({
         email_verified: true,
         email_verified_at: new Date().toISOString()
       })
@@ -64,24 +89,28 @@ Deno.serve(async (req: Request) => {
     if (updateError) {
       console.error("User update error:", updateError);
       return new Response(
-        JSON.stringify({ error: "Fehler beim Aktualisieren des Benutzerstatus" }),
+        JSON.stringify({ type: "update_error", error: "Fehler beim Aktualisieren des Benutzerstatus", details: updateError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    console.log("Marking token as used");
 
     const { error: markError } = await supabase.rpc("mark_token_used", { p_token: token });
     if (markError) {
       console.error("Error marking token as used:", markError);
     }
 
+    console.log("Verification successful");
+
     return new Response(
       JSON.stringify({ success: true, message: "E-Mail-Adresse erfolgreich bestätigt" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Caught error:", error);
     return new Response(
-      JSON.stringify({ error: "Ein Fehler ist aufgetreten" }),
+      JSON.stringify({ type: "unknown", error: "Ein Fehler ist aufgetreten", details: error.message || String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
