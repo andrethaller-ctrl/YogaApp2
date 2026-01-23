@@ -32,50 +32,48 @@ Deno.serve(async (req: Request) => {
 
     console.log("Verifying token:", token.substring(0, 10) + "...");
 
-    const { data: verifyResult, error: verifyError } = await supabase.rpc(
-      "verify_token",
-      { p_token: token, p_type: "email_verification" }
-    );
+    const { data: tokenRecord, error: tokenError } = await supabase
+      .from("auth_tokens")
+      .select("user_id, expires_at, used")
+      .eq("token", token)
+      .eq("type", "email_verification")
+      .maybeSingle();
 
-    console.log("Verify result:", JSON.stringify(verifyResult));
-    console.log("Verify error:", JSON.stringify(verifyError));
+    console.log("Token record:", JSON.stringify(tokenRecord));
+    console.log("Token error:", JSON.stringify(tokenError));
 
-    if (verifyError) {
-      console.error("Token verification error:", verifyError);
+    if (tokenError) {
+      console.error("Token lookup error:", tokenError);
       return new Response(
-        JSON.stringify({ type: "verify_error", error: "Fehler bei der Token-Überprüfung", details: verifyError.message }),
+        JSON.stringify({ error: "Fehler bei der Token-Suche", details: tokenError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!verifyResult || verifyResult.length === 0) {
-      console.error("No result from verify_token");
+    if (!tokenRecord) {
       return new Response(
-        JSON.stringify({ type: "no_result", error: "Keine Antwort von der Verifizierungsfunktion" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const result = verifyResult[0];
-    console.log("Result object:", JSON.stringify(result));
-
-    if (!result.valid) {
-      return new Response(
-        JSON.stringify({ type: "invalid_token", error: result.message || "Token ungültig oder abgelaufen" }),
+        JSON.stringify({ error: "Token nicht gefunden oder ungültig" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = result.user_id;
-
-    if (!userId) {
-      console.error("No user_id in result");
+    if (tokenRecord.used) {
       return new Response(
-        JSON.stringify({ type: "no_user_id", error: "Keine Benutzer-ID gefunden" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Dieser Token wurde bereits verwendet" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    const now = new Date();
+    const expiresAt = new Date(tokenRecord.expires_at);
+    if (expiresAt <= now) {
+      return new Response(
+        JSON.stringify({ error: "Dieser Token ist abgelaufen" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = tokenRecord.user_id;
     console.log("Updating user:", userId);
 
     const { error: updateError } = await supabase
@@ -89,14 +87,18 @@ Deno.serve(async (req: Request) => {
     if (updateError) {
       console.error("User update error:", updateError);
       return new Response(
-        JSON.stringify({ type: "update_error", error: "Fehler beim Aktualisieren des Benutzerstatus", details: updateError.message }),
+        JSON.stringify({ error: "Fehler beim Aktualisieren des Benutzerstatus", details: updateError.message }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log("Marking token as used");
 
-    const { error: markError } = await supabase.rpc("mark_token_used", { p_token: token });
+    const { error: markError } = await supabase
+      .from("auth_tokens")
+      .update({ used: true })
+      .eq("token", token);
+
     if (markError) {
       console.error("Error marking token as used:", markError);
     }
@@ -110,7 +112,7 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     console.error("Caught error:", error);
     return new Response(
-      JSON.stringify({ type: "unknown", error: "Ein Fehler ist aufgetreten", details: error.message || String(error) }),
+      JSON.stringify({ error: "Ein Fehler ist aufgetreten", details: error.message || String(error) }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
