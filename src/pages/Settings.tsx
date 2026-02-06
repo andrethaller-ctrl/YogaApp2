@@ -10,6 +10,8 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [cancellationDeadline, setCancellationDeadline] = useState('48');
   const [defaultMaxParticipants, setDefaultMaxParticipants] = useState('10');
+  const [forgotPasswordEnabled, setForgotPasswordEnabled] = useState(true);
+  const [registrationEmailEnabled, setRegistrationEmailEnabled] = useState(true);
 
   useEffect(() => {
     if (isAdmin) {
@@ -30,6 +32,10 @@ export default function Settings() {
           setCancellationDeadline(String(setting.value));
         } else if (setting.key === 'default_max_participants') {
           setDefaultMaxParticipants(String(setting.value));
+        } else if (setting.key === 'forgot_password_enabled') {
+          setForgotPasswordEnabled(setting.value === 'true' || setting.value === true);
+        } else if (setting.key === 'registration_email_enabled') {
+          setRegistrationEmailEnabled(setting.value === 'true' || setting.value === true);
         }
       });
     } catch (error) {
@@ -51,6 +57,16 @@ export default function Settings() {
         {
           key: 'default_max_participants',
           value: parseInt(defaultMaxParticipants),
+          updated_at: new Date().toISOString()
+        },
+        {
+          key: 'forgot_password_enabled',
+          value: forgotPasswordEnabled ? 'true' : 'false',
+          updated_at: new Date().toISOString()
+        },
+        {
+          key: 'registration_email_enabled',
+          value: registrationEmailEnabled ? 'true' : 'false',
           updated_at: new Date().toISOString()
         }
       ];
@@ -134,6 +150,66 @@ export default function Settings() {
               <p className="mt-1 text-sm text-gray-500">
                 Dieser Wert wird beim Erstellen neuer Kurse verwendet
               </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">E-Mail-Funktionen</h2>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <label htmlFor="forgotPasswordToggle" className="block font-medium text-gray-900 mb-1">
+                  "Passwort vergessen" aktivieren
+                </label>
+                <p className="text-sm text-gray-600">
+                  Ermöglicht Benutzern das Zurücksetzen ihres Passworts per E-Mail
+                </p>
+              </div>
+              <div className="ml-4">
+                <button
+                  id="forgotPasswordToggle"
+                  type="button"
+                  onClick={() => setForgotPasswordEnabled(!forgotPasswordEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    forgotPasswordEnabled ? 'bg-teal-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      forgotPasswordEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <label htmlFor="registrationEmailToggle" className="block font-medium text-gray-900 mb-1">
+                  Bestätigungs-E-Mail bei Registrierung senden
+                </label>
+                <p className="text-sm text-gray-600">
+                  Sendet eine E-Mail-Bestätigung an neue Benutzer nach der Registrierung
+                </p>
+              </div>
+              <div className="ml-4">
+                <button
+                  id="registrationEmailToggle"
+                  type="button"
+                  onClick={() => setRegistrationEmailEnabled(!registrationEmailEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    registrationEmailEnabled ? 'bg-teal-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      registrationEmailEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
         </div>

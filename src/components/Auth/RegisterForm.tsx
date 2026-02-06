@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff, User, Mail, Lock, Phone, MapPin, Home } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const RegisterForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -20,8 +21,31 @@ const RegisterForm: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  
+  const [registrationEmailEnabled, setRegistrationEmailEnabled] = useState(true);
+
   const { signUp } = useAuth();
+
+  useEffect(() => {
+    checkEmailFeatureStatus();
+  }, []);
+
+  const checkEmailFeatureStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('global_settings')
+        .select('value')
+        .eq('key', 'registration_email_enabled')
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setRegistrationEmailEnabled(data.value === 'true' || data.value === true);
+      }
+    } catch (err) {
+      console.error('Error checking email feature status:', err);
+    }
+  };
 
   const handleChange = (e: React.FormEvent<HTMLInputElement>) => {
     const { name, value } = e.currentTarget;
@@ -59,23 +83,25 @@ const RegisterForm: React.FC = () => {
           setError('Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.');
         }
       } else if (data?.user) {
-        try {
-          await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-              },
-              body: JSON.stringify({
-                userId: data.user.id,
-                email: formData.email,
-              }),
-            }
-          );
-        } catch (emailError) {
-          console.error('Error sending verification email:', emailError);
+        if (registrationEmailEnabled) {
+          try {
+            await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-verification-email`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                },
+                body: JSON.stringify({
+                  userId: data.user.id,
+                  email: formData.email,
+                }),
+              }
+            );
+          } catch (emailError) {
+            console.error('Error sending verification email:', emailError);
+          }
         }
         setSuccess(true);
       }
@@ -93,13 +119,21 @@ const RegisterForm: React.FC = () => {
           <h3 className="text-lg font-semibold text-green-800 mb-2">
             Registrierung erfolgreich!
           </h3>
-          <p className="text-sm text-green-600 mb-3">
-            Wir haben Ihnen eine Bestätigungsmail an <strong>{formData.email}</strong> gesendet.
-          </p>
-          <p className="text-sm text-green-600">
-            Bitte überprüfen Sie Ihr E-Mail-Postfach und klicken Sie auf den Bestätigungslink,
-            um Ihr Konto zu aktivieren.
-          </p>
+          {registrationEmailEnabled ? (
+            <>
+              <p className="text-sm text-green-600 mb-3">
+                Wir haben Ihnen eine Bestätigungsmail an <strong>{formData.email}</strong> gesendet.
+              </p>
+              <p className="text-sm text-green-600">
+                Bitte überprüfen Sie Ihr E-Mail-Postfach und klicken Sie auf den Bestätigungslink,
+                um Ihr Konto zu aktivieren.
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-green-600">
+              Ihr Konto wurde erfolgreich erstellt. Sie können sich jetzt anmelden.
+            </p>
+          )}
         </div>
       </div>
     );

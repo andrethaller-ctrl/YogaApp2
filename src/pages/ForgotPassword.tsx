@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const ForgotPassword: React.FC = () => {
   const navigate = useNavigate();
@@ -8,9 +9,41 @@ const ForgotPassword: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [featureEnabled, setFeatureEnabled] = useState(true);
+  const [checkingFeature, setCheckingFeature] = useState(true);
+
+  useEffect(() => {
+    checkFeatureStatus();
+  }, []);
+
+  const checkFeatureStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('global_settings')
+        .select('value')
+        .eq('key', 'forgot_password_enabled')
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setFeatureEnabled(data.value === 'true' || data.value === true);
+      }
+    } catch (err) {
+      console.error('Error checking feature status:', err);
+    } finally {
+      setCheckingFeature(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!featureEnabled) {
+      setError('Die Funktion "Passwort vergessen" ist derzeit deaktiviert. Bitte kontaktieren Sie den Administrator.');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -58,6 +91,37 @@ const ForgotPassword: React.FC = () => {
             </p>
             <p className="text-sm text-gray-500 mb-6">
               Bitte überprüfen Sie Ihr E-Mail-Postfach und folgen Sie den Anweisungen.
+            </p>
+            <button
+              onClick={() => navigate('/auth')}
+              className="w-full bg-teal-600 text-white py-3 rounded-lg hover:bg-teal-700 transition-colors"
+            >
+              Zur Anmeldung
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (checkingFeature) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+      </div>
+    );
+  }
+
+  if (!featureEnabled) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">
+              Funktion deaktiviert
+            </h1>
+            <p className="text-gray-600 mb-6">
+              Die Funktion "Passwort vergessen" ist derzeit deaktiviert. Bitte kontaktieren Sie den Administrator.
             </p>
             <button
               onClick={() => navigate('/auth')}

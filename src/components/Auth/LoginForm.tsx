@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
@@ -11,8 +11,31 @@ const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [forgotPasswordEnabled, setForgotPasswordEnabled] = useState(true);
 
   const { signIn } = useAuth();
+
+  useEffect(() => {
+    checkForgotPasswordStatus();
+  }, []);
+
+  const checkForgotPasswordStatus = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('global_settings')
+        .select('value')
+        .eq('key', 'forgot_password_enabled')
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setForgotPasswordEnabled(data.value === 'true' || data.value === true);
+      }
+    } catch (err) {
+      console.error('Error checking forgot password status:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,13 +86,15 @@ const LoginForm: React.FC = () => {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Passwort
             </label>
-            <button
-              type="button"
-              onClick={() => navigate('/forgot-password')}
-              className="text-sm text-teal-600 hover:text-teal-700"
-            >
-              Passwort vergessen?
-            </button>
+            {forgotPasswordEnabled && (
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-sm text-teal-600 hover:text-teal-700"
+              >
+                Passwort vergessen?
+              </button>
+            )}
           </div>
           <div className="relative">
             <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
