@@ -106,8 +106,20 @@ Deno.serve(async (req: Request) => {
         });
 
         if (!emailResponse.ok) {
-          console.error("Error sending email:", await emailResponse.text());
+          const errorText = await emailResponse.text();
+          console.error("Error sending email:", errorText);
+
+          return new Response(
+            JSON.stringify({
+              error: "E-Mail konnte nicht versendet werden. Bitte kontaktieren Sie den Administrator.",
+              details: errorText
+            }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
+
+        const emailResult = await emailResponse.json();
+        console.log("Email sent successfully:", emailResult);
       }
     }
 
