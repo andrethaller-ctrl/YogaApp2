@@ -11,7 +11,8 @@ const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [forgotPasswordEnabled, setForgotPasswordEnabled] = useState(true);
+  const [forgotPasswordEnabled, setForgotPasswordEnabled] = useState(false);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   const { signIn } = useAuth();
 
@@ -34,6 +35,8 @@ const LoginForm: React.FC = () => {
       }
     } catch (err) {
       console.error('Error checking forgot password status:', err);
+    } finally {
+      setSettingsLoaded(true);
     }
   };
 
@@ -86,7 +89,7 @@ const LoginForm: React.FC = () => {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Passwort
             </label>
-            {forgotPasswordEnabled && (
+            {settingsLoaded && forgotPasswordEnabled && (
               <button
                 type="button"
                 onClick={() => navigate('/forgot-password')}
