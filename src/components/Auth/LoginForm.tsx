@@ -31,10 +31,16 @@ const LoginForm: React.FC = () => {
       if (error) throw error;
 
       if (data) {
-        setForgotPasswordEnabled(data.value === 'true' || data.value === true);
+        const isEnabled = data.value === 'true' || data.value === true;
+        console.log('Forgot password setting loaded:', data.value, '-> enabled:', isEnabled);
+        setForgotPasswordEnabled(isEnabled);
+      } else {
+        console.log('No forgot password setting found, defaulting to false');
+        setForgotPasswordEnabled(false);
       }
     } catch (err) {
       console.error('Error checking forgot password status:', err);
+      setForgotPasswordEnabled(false);
     } finally {
       setSettingsLoaded(true);
     }
@@ -89,7 +95,7 @@ const LoginForm: React.FC = () => {
             <label htmlFor="password" className="block text-sm font-medium text-gray-700">
               Passwort
             </label>
-            {settingsLoaded && forgotPasswordEnabled && (
+            {forgotPasswordEnabled && (
               <button
                 type="button"
                 onClick={() => navigate('/forgot-password')}
