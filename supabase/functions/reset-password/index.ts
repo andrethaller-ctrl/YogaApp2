@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const result = verifyResult[0];
-    if (!result || !result.valid) {
+    if (!result || !result.is_valid) {
       return new Response(
         JSON.stringify({ error: result?.message || "Token ungültig oder abgelaufen" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
