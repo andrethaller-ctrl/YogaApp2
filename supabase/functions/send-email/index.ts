@@ -63,27 +63,8 @@ Deno.serve(async (req: Request) => {
         user: smtpUser,
         pass: smtpPass,
       },
-      tls: {
-        rejectUnauthorized: true,
-      },
     });
 
-    console.log("Verifying SMTP connection...");
-    try {
-      await transporter.verify();
-      console.log("SMTP connection verified successfully");
-    } catch (verifyError) {
-      console.error("SMTP verification failed:", verifyError);
-      return new Response(
-        JSON.stringify({
-          error: "SMTP connection failed. Please check your SMTP credentials and server settings.",
-          details: verifyError instanceof Error ? verifyError.message : String(verifyError)
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("Attempting to send email...");
     const info = await transporter.sendMail({
       from: `"Die Thallers Yoga" <${smtpUser}>`,
       to: to,
@@ -93,7 +74,6 @@ Deno.serve(async (req: Request) => {
     });
 
     console.log("Email sent successfully. MessageId:", info.messageId);
-    console.log("Response:", info.response);
 
     return new Response(
       JSON.stringify({ success: true, message: "Email sent successfully", messageId: info.messageId }),
